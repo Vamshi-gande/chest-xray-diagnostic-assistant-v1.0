@@ -1,5 +1,6 @@
 """
 Chest X-ray Diagnostic Assistant - Hugging Face Spaces
+SEO-optimized version for xrayaid.streamlit.app
 Optimized for Streamlit 1.28.0 with per-condition thresholds
 """
 
@@ -14,13 +15,24 @@ import cv2
 import matplotlib.pyplot as plt
 
 # ============================================
-# PAGE CONFIG
+# PAGE CONFIG - SEO OPTIMIZED
 # ============================================
 st.set_page_config(
-    page_title="Chest X-ray Diagnostic Assistant",
+    page_title="X-ray AI Diagnostic Assistant | Free Chest X-ray Analysis Tool",
     page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
+)
+
+# ============================================
+# SEO META DESCRIPTION (via header/text)
+# ============================================
+st.header("Free AI-Powered Chest X-ray Diagnostic Assistant")
+st.text(
+    "Advanced chest X-ray analysis tool using deep learning AI to detect cardiomegaly, "
+    "edema, consolidation, atelectasis, and pleural effusion. Upload your chest X-ray "
+    "for instant AI-powered diagnostic insights with explainable Grad-CAM visualization. "
+    "Free medical imaging analysis tool for healthcare professionals and researchers."
 )
 
 # ============================================
@@ -71,7 +83,7 @@ class ChestXrayModel(nn.Module):
 @st.cache_resource
 def load_model():
     """Load trained model"""
-    device = torch.device('cpu')  # Use CPU for Hugging Face free tier
+    device = torch.device('cpu')
     model = ChestXrayModel(num_classes=5).to(device)
     
     try:
@@ -107,63 +119,43 @@ def generate_gradcam_simple(model, image_tensor, device):
     model.eval()
     target_layer = model.model.features[-1]
     
-    # Storage for activations and gradients
     activation_storage = {'value': None}
     gradient_storage = {'value': None}
     
     def forward_hook(module, input, output):
-        # Store the activation
         activation_storage['value'] = output.detach()
         
-        # Register a hook on the output tensor to capture gradients
         def backward_hook(grad):
             gradient_storage['value'] = grad.detach()
-            return None  # Don't modify the gradient
+            return None
         
-        # Register hook on the output tensor
         output.register_hook(backward_hook)
     
-    # Register forward hook
     handle = target_layer.register_forward_hook(forward_hook)
     
     try:
-        # Forward pass with fresh tensor
         input_tensor = image_tensor.detach().clone()
         input_tensor.requires_grad = True
         
         output = model(input_tensor)
         max_idx = output.argmax(dim=1).item()
         
-        # Backward pass
         model.zero_grad()
         target_score = output[0, max_idx]
         target_score.backward()
         
-        # Remove hook
         handle.remove()
         
-        # Check if we got the data
         if activation_storage['value'] is None or gradient_storage['value'] is None:
             raise ValueError("Failed to capture activations or gradients")
         
-        # Get stored values
-        gradients = gradient_storage['value']
-        activations = activation_storage['value']
+        gradients = gradient_storage['value'].cpu()
+        activations = activation_storage['value'].cpu()
         
-        # Move to CPU for processing
-        gradients = gradients.cpu()
-        activations = activations.cpu()
-        
-        # Compute weights (global average pooling of gradients)
         weights = torch.mean(gradients, dim=[2, 3], keepdim=True)
-        
-        # Weighted combination of activation maps
         weighted_activations = (weights * activations).sum(dim=1, keepdim=True)
         
-        # Get the heatmap
         heatmap = weighted_activations.squeeze().numpy()
-        
-        # Apply ReLU and normalize
         heatmap = np.maximum(heatmap, 0)
         if heatmap.max() > 0:
             heatmap = heatmap / heatmap.max()
@@ -200,7 +192,6 @@ THRESHOLDS = {
 import requests
 import json
 
-# Use Hugging Face Inference API (Free!)
 HF_API_URL = "https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct"
 
 def query_llm(prompt, hf_token=None):
@@ -244,7 +235,6 @@ def generate_report(predictions, use_llm=True):
         threshold = THRESHOLDS[label]
         status = "POSITIVE" if prob > threshold else "NEGATIVE"
         
-        # Confidence calculation based on distance from threshold
         distance = abs(prob - threshold)
         if distance > 0.2:
             confidence = "High"
@@ -258,12 +248,10 @@ def generate_report(predictions, use_llm=True):
         if prob > threshold:
             detected_findings.append(f"{label} ({prob:.0%})")
         
-        # Format for LLM
         findings_for_llm.append(f"{label}: {prob:.1%} ({status})")
     
     findings_text += "\n**IMPRESSION:**\n\n"
     
-    # Try LLM first
     if use_llm:
         hf_token = st.secrets.get("HF_TOKEN", None) if hasattr(st, 'secrets') else None
         
@@ -280,10 +268,8 @@ Write only the clinical impression (no preamble):"""
         if llm_response and len(llm_response) > 20:
             findings_text += llm_response + "\n\n"
         else:
-            # Fallback to rule-based
             use_llm = False
     
-    # Rule-based fallback
     if not use_llm:
         if len(detected_findings) == 0:
             findings_text += "No significant abnormalities detected in the analyzed pathologies. "
@@ -307,125 +293,121 @@ Write only the clinical impression (no preamble):"""
 # MAIN APP
 # ============================================
 def main():
-    # Header
+    # Main title with SEO keywords
     st.markdown(
         '<div class="main-header">'
-        '<h1>Chest X-ray Diagnostic Assistant</h1>'
-        '<p>AI-powered analysis with explainable predictions using custom thresholds</p>'
+        '<h1> X-ray AI: Chest X-ray Diagnostic Assistant</h1>'
+        '<p>Free AI-powered chest X-ray analysis | Detect lung diseases with deep learning</p>'
         '</div>', 
         unsafe_allow_html=True
     )
     
     # Sidebar
     with st.sidebar:
-        st.header("ℹ️ About")
+        st.header("ℹ️ About X-ray AI")
         st.info("""
-        **This AI system analyzes chest X-rays for:**
-        - Cardiomegaly (enlarged heart)
-        - Edema (fluid accumulation)
-        - Consolidation (lung tissue solidification)
-        - Atelectasis (lung collapse)
-        - Pleural Effusion (fluid around lungs)
+        **Free AI Chest X-ray Analysis Tool**
         
-        **Technology:**
-        - DenseNet-121 CNN
-        - Grad-CAM visualization
-        - Hugging Face LLM (Phi-3-mini)
-        - Custom per-condition thresholds
+        This medical imaging AI analyzes chest X-rays to detect:
+        - **Cardiomegaly** (enlarged heart)
+        - **Edema** (fluid in lungs)
+        - **Consolidation** (lung tissue solidification)
+        - **Atelectasis** (lung collapse)
+        - **Pleural Effusion** (fluid around lungs)
+        
+        **Advanced AI Technology:**
+        - DenseNet-121 deep learning CNN
+        - Explainable AI with Grad-CAM visualization
+        - Hugging Face LLM report generation (Phi-3-mini)
+        - Custom per-condition diagnostic thresholds
+        - Trained on CheXpert medical imaging dataset
         """)
         
-        st.warning("⚠️ **Disclaimer**: Research prototype only. Not for clinical diagnosis.")
+        st.warning("⚠️ **Medical Disclaimer**: This is a research AI tool, not FDA-approved medical software. Always consult qualified radiologists for clinical diagnosis.")
         
         st.markdown("---")
         
-        # LLM Toggle
         st.markdown("**AI Report Generation:**")
-        use_llm = st.checkbox("Use LLM for reports", value=True, 
-                             help="Uses Hugging Face Inference API (Phi-3-mini) for natural language reports")
+        use_llm = st.checkbox("Use AI language model for reports", value=True, 
+                             help="Uses Hugging Face Inference API (Phi-3-mini) for natural language clinical reports")
         
         if use_llm:
             has_token = hasattr(st, 'secrets') and 'HF_TOKEN' in st.secrets
             if has_token:
-                st.success("✅ HF Token detected")
+                st.success("✅ HF API Token detected")
             else:
-                st.info("💡 Add HF_TOKEN to secrets for unlimited API calls")
+                st.info("💡 Add HF_TOKEN to secrets for unlimited API access")
         
         st.markdown("---")
-        st.markdown("**Model Performance:**")
+        st.markdown("**AI Model Performance:**")
         col_a, col_b = st.columns(2)
         with col_a:
-            st.metric("AUROC", "0.82")
+            st.metric("AUROC Score", "0.82")
         with col_b:
             st.metric("Accuracy", "78%")
         
         st.markdown("---")
-        st.markdown("**Custom Thresholds:**")
+        st.markdown("**Detection Thresholds:**")
         for label, thresh in THRESHOLDS.items():
             st.text(f"{label}: {thresh:.0%}")
+        
+        st.markdown("---")
+        st.markdown("**🔗 Access this tool:**")
+        st.code("xrayaid.streamlit.app", language=None)
     
     # Load model
-    with st.spinner("Loading model..."):
+    with st.spinner("Loading AI diagnostic model..."):
         model, device = load_model()
-        st.success("Model loaded successfully!")
+        st.success("AI model loaded and ready for chest X-ray analysis!")
     
     # Main area
-    st.header("Upload Chest X-ray")
+    st.header("📤 Upload Your Chest X-ray for Free AI Analysis")
     
-    # File uploader
     uploaded_file = st.file_uploader(
-        "Choose an X-ray image (JPG, PNG)",
+        "Choose a chest X-ray image (JPG, PNG, or JPEG format)",
         type=['jpg', 'jpeg', 'png'],
-        help="Upload a frontal chest X-ray for analysis"
+        help="Upload a frontal chest X-ray radiograph for instant AI-powered diagnostic analysis"
     )
     
     if uploaded_file is not None:
-        # Load image
         image = Image.open(uploaded_file).convert('RGB')
                
-        # Display original BEFORE analysis
-        st.subheader("Original X-ray")
+        st.subheader("Your Uploaded Chest X-ray")
         st.image(image, use_column_width=True)
         
-        # Analyze button
-        if st.button("Analyze X-ray", type="primary"):
-            with st.spinner("Analyzing image..."):
-                # Preprocess
+        if st.button("Analyze X-ray with AI", type="primary"):
+            with st.spinner("AI is analyzing your chest X-ray..."):
                 image_tensor = preprocess_image(image).to(device)
                 
-                # Predict
                 with torch.no_grad():
                     predictions = model(image_tensor).cpu().numpy()[0]
                 
                 labels = list(THRESHOLDS.keys())
                 
-                # Generate Grad-CAM
                 try:
                     cam = generate_gradcam_simple(model, image_tensor, device)
                     visualization = overlay_heatmap(image, cam)
                     
-                    # NOW create columns INSIDE the button block
                     col1, col2, col3 = st.columns(3)
                 
                     with col1:
-                        st.subheader("Original")
+                        st.subheader("Original X-ray")
                         st.image(image, use_column_width=True)
 
                     with col2:
-                        st.subheader("Attention Heatmap")
+                        st.subheader("AI Attention Map")
                         st.image(cam, width=400)
                     
                     with col3:
-                        st.subheader("Overlay")
+                        st.subheader("Diagnostic Overlay")
                         st.image(visualization, width=400)
                 except Exception as e:
-                    st.warning(f"⚠️ Could not generate Grad-CAM: {e}")
+                    st.warning(f"⚠️ Could not generate Grad-CAM visualization: {e}")
                 
                 st.markdown("---")
                 
-                # Predictions with custom thresholds
-                st.subheader("Prediction Results")
+                st.subheader("AI Diagnostic Results")
                 
-                # Create metrics in columns
                 metric_cols = st.columns(5)
                 for idx, (label, prob) in enumerate(zip(labels, predictions)):
                     threshold = THRESHOLDS[label]
@@ -438,39 +420,33 @@ def main():
                             delta=delta_text
                         )
                 
-                # Detailed table
-                st.markdown("### Detailed Analysis")
+                st.markdown("### Detailed Diagnostic Analysis")
                 for label, prob in zip(labels, predictions):
                     threshold = THRESHOLDS[label]
                     status_emoji = "✅" if prob > threshold else "❌"
                     
-                    # Create progress bar
                     col_label, col_bar = st.columns([1, 3])
                     with col_label:
                         st.write(f"{status_emoji} **{label}**")
                     with col_bar:
                         st.progress(float(prob))
-                        st.caption(f"Probability: {prob:.1%} | Threshold: {threshold:.0%}")
+                        st.caption(f"AI Confidence: {prob:.1%} | Detection Threshold: {threshold:.0%}")
                 
-                # Bar chart
-                st.subheader("Confidence Levels")
+                st.subheader("AI Confidence Visualization")
                 fig, ax = plt.subplots(figsize=(10, 5))
                 
-                # Color bars based on threshold
                 colors = ['#FF6B6B' if p > THRESHOLDS[l] else '#4ECDC4' 
                          for l, p in zip(labels, predictions)]
                 bars = ax.barh(labels, predictions, color=colors)
                 
-                # Add threshold lines
                 for idx, (label, thresh) in enumerate(THRESHOLDS.items()):
                     ax.plot([thresh, thresh], [idx-0.4, idx+0.4], 
                            'k--', linewidth=2, alpha=0.5)
                 
-                ax.set_xlabel('Probability', fontsize=12)
+                ax.set_xlabel('AI Probability Score', fontsize=12)
                 ax.set_xlim(0, 1)
-                ax.set_title('Predictions vs Custom Thresholds (dashed lines)', fontsize=14)
+                ax.set_title('AI Predictions vs Custom Detection Thresholds (dashed lines)', fontsize=14)
                 
-                # Add value labels
                 for bar, prob in zip(bars, predictions):
                     width = bar.get_width()
                     ax.text(width + 0.02, bar.get_y() + bar.get_height()/2, 
@@ -480,64 +456,90 @@ def main():
                 plt.tight_layout()
                 st.pyplot(fig)
                 
-                # Clinical report
                 st.markdown("---")
-                st.subheader("Clinical Report")
-                report = generate_report(predictions)
+                st.subheader("AI-Generated Clinical Report")
+                report = generate_report(predictions, use_llm)
                 st.markdown(report)
                 
-                # Download button
                 st.download_button(
-                    label="📥 Download Report (TXT)",
+                    label="📥 Download AI Diagnostic Report (TXT)",
                     data=report,
-                    file_name="chest_xray_report.txt",
+                    file_name="xray_ai_diagnostic_report.txt",
                     mime="text/plain"
                 )
                 
-                # Additional info
-                with st.expander("ℹ️ Understanding the Results"):
+                with st.expander("ℹ️ Understanding Your AI Diagnostic Results"):
                     st.markdown("""
-                    **Custom Threshold System:**
-                    - Each condition has an optimized detection threshold
-                    - Thresholds are tuned for better accuracy per condition
+                    **How X-ray AI Works:**
+                    
+                    **Custom Threshold Detection System:**
+                    - Each lung condition has an AI-optimized detection threshold
+                    - Thresholds are fine-tuned for maximum diagnostic accuracy
                     - Cardiomegaly: 28% | Edema: 32% | Consolidation: 25%
                     - Atelectasis: 30% | Pleural Effusion: 35%
                     
-                    **Confidence Levels:**
-                    - **High**: Probability differs from threshold by >20%
-                    - **Moderate**: Probability differs by 10-20%
-                    - **Low**: Probability differs by <10%
+                    **AI Confidence Levels:**
+                    - **High Confidence**: AI probability differs from threshold by >20%
+                    - **Moderate Confidence**: Probability differs by 10-20%
+                    - **Low Confidence**: Probability differs by <10%
                     
-                    **Grad-CAM Heatmap:**
-                    - Shows which regions the AI focused on
-                    - Red/yellow = high attention
-                    - Blue/purple = low attention
+                    **Grad-CAM Heatmap Visualization:**
+                    - Shows which X-ray regions the AI analyzed most
+                    - Red/yellow areas = high AI attention (key diagnostic regions)
+                    - Blue/purple areas = low AI attention
+                    - Helps doctors understand AI decision-making (explainable AI)
                     
-                    **Important Notes:**
-                    - This is an AI research tool, not a medical device
-                    - Always consult a qualified radiologist for diagnosis
-                    - Results should be used with clinical findings
+                    **Important Medical Disclaimer:**
+                    - X-ray AI is a research prototype and educational tool
+                    - Not FDA-approved for clinical diagnostic use
+                    - Always consult board-certified radiologists for medical diagnosis
+                    - AI results must be interpreted with full clinical context
+                    - Free tool for healthcare research and education only
                     """)
     else:
-        # Instructions when no file uploaded
-        st.info("👆 Please upload a chest X-ray image to begin analysis")
+        st.info("👆 Upload a chest X-ray image above to start free AI diagnostic analysis")
         
-        st.markdown("### How to Use:")
+        st.markdown("### How to Use X-ray AI:")
         st.markdown("""
-        1. **Upload** a frontal chest X-ray (JPG or PNG format)
-        2. Click **"Analyze X-ray"** button
-        3. View predictions with custom thresholds
-        4. Examine Grad-CAM heatmaps
-        5. Read the AI-generated clinical report
-        6. Download results for your records
+        1. **Upload** a frontal chest X-ray radiograph (JPG, PNG, or JPEG format)
+        2. Click the **"Analyze X-ray with AI"** button to start deep learning analysis
+        3. View AI diagnostic predictions with custom detection thresholds
+        4. Examine explainable AI Grad-CAM heatmaps showing decision regions
+        5. Read the AI-generated clinical diagnostic report
+        6. Download complete results for your medical records or research
+        
+        **Best Results:** Use standard PA (posteroanterior) or AP (anteroposterior) chest X-ray views
+        """)
+        
+        st.markdown("### About This Medical AI Tool")
+        st.markdown("""
+        **X-ray AI** is a free, open-source deep learning tool for chest X-ray analysis, 
+        built for healthcare researchers, medical students, and radiology professionals. 
+        
+        **Key Features:**
+        -  Advanced DenseNet-121 convolutional neural network
+        -  Detects 5 major lung and heart conditions
+        -  Explainable AI with Grad-CAM visualization technology
+        -  Natural language report generation using Hugging Face LLMs
+        -  100% free medical imaging analysis tool
+        -  Open-source AI for medical education and research
+        
+        **Training Data:** CheXpert large-scale chest X-ray dataset from Stanford University
+        
+        **Access:** Visit **xrayaid.streamlit.app** for instant chest X-ray AI analysis
         """)
     
-    # Footer
+    # SEO-optimized footer
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: gray;'>
-        <p>Built with ❤️ using PyTorch, Streamlit, and Hugging Face Spaces</p>
-        <p><small>Model trained on CheXpert dataset | DenseNet-121 architecture | Custom threshold optimization</small></p>
+        <p><strong>X-ray AI - Free Chest X-ray Diagnostic Assistant</strong></p>
+        <p>AI-powered medical imaging analysis | Built with PyTorch deep learning, Streamlit, and Hugging Face</p>
+        <p><small>DenseNet-121 architecture | Trained on CheXpert dataset | Custom threshold optimization | Explainable AI with Grad-CAM</small></p>
+        <p><small><strong>Keywords:</strong> chest xray AI, medical imaging analysis, deep learning radiology, 
+        free chest xray analysis, AI diagnostic tool, lung disease detection, cardiomegaly detection AI, 
+        pleural effusion AI, atelectasis detection, pulmonary edema AI, consolidation detection, 
+        explainable medical AI, Grad-CAM visualization, DenseNet chest xray, xrayaid</small></p>
     </div>
     """, unsafe_allow_html=True)
 
