@@ -1,16 +1,10 @@
 streamlit==1.28.0
-altair
 pandas
 numpy==1.24.3
 Pillow==10.1.0
-
-# PyTorch CPU wheels
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.1.0
-torchvision==0.16.0
-
-# Back to normal pypi
-torchcam==0.4.0
+torch==2.1.0+cpu
+torchvision==0.16.0+cpu
+--find-links https://download.pytorch.org/whl/torch_stable.html
 matplotlib==3.8.0
 opencv-python-headless==4.8.1.78
-transformers==4.35.0
+requests
